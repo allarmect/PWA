@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metis Pro - Web Dashboard Universale</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1abc9c">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        :root { --bg: #1a252f; --panel: #2c3e50; --accent: #1abc9c; --accent-hover: #16a085; --text: #ecf0f1; --danger: #e74c3c; --warning: #f1c40f; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; }
+        
+        /* LOGIN SCREEN CSS */
+        #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; width: 100%; background: var(--bg); position: absolute; top: 0; left: 0; z-index: 10000; }
+        .login-box { background: var(--panel); padding: 40px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 350px; text-align: center; box-sizing: border-box; }
+        .login-box h2 { color: var(--accent); margin-top: 0; margin-bottom: 25px; font-size: 22px; }
+        .login-box input { margin-bottom: 15px; width: 100%; padding: 12px; font-size: 14px; background: #34495e; color: white; border: 1px solid #455d7a; border-radius: 5px; box-sizing: border-box; outline: none; }
+        .login-box button { width: 100%; padding: 12px; font-size: 15px; }
+        
+        /* DASHBOARD CSS */
+        #dashboard-screen { display: none; height: 100vh; width: 100%; flex-direction: row; }
+        
+        .sidebar { width: 250px; background: #151e27; display: flex; flex-direction: column; padding: 20px 0; border-right: 1px solid #34495e; transition: transform 0.3s ease; z-index: 1000; }
+        .brand { text-align: center; color: var(--accent); font-size: 20px; font-weight: bold; margin-bottom: 30px; letter-spacing: 1px; }
+        .nav-item { padding: 15px 20px; cursor: pointer; transition: 0.3s; border-left: 4px solid transparent; font-weight: 500; display:flex; justify-content:space-between; }
+        .nav-item:hover { background: var(--panel); }
+        .nav-item.active { background: var(--panel); border-left-color: var(--accent); color: var(--accent); }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .topbar { background: var(--panel); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #34495e; }
+        .hamburger { display: none; font-size: 24px; cursor: pointer; color: white; margin-right: 15px; user-select: none; }
+        
+        select, input[type="text"], input[type="email"], input[type="file"], textarea { background: #34495e; color: white; border: 1px solid #455d7a; padding: 10px; border-radius: 5px; outline: none; width: 100%; box-sizing: border-box; }
+        button { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: var(--accent-hover); }
+        button.danger { background: var(--danger); }
+        
+        .tab-content { flex: 1; padding: 20px; overflow-y: auto; display: none; }
+        .tab-content.active { display: flex; flex-direction: column; gap: 20px; }
+        
+        /* CHAT CSS */
+        .chat-container { display: flex; gap: 20px; flex: 1; height: 100%; overflow: hidden; }
+        .chat-list { width: 300px; background: var(--panel); border-radius: 10px; padding: 10px; overflow-y: auto; display:flex; flex-direction:column; gap:5px; transition: 0.3s; }
+        .chat-area { flex: 1; background: var(--panel); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; transition: 0.3s; }
+        .chat-btn { background: #34495e; color: white; border: none; padding: 12px; border-radius: 6px; text-align: left; width: 100%; }
+        .chat-btn.active { background: var(--accent); }
+        .msg-box { flex: 1; background: #1e2b3c; border-radius: 8px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; word-wrap: break-word; }
+        .msg-admin { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg-student { background: #34495e; align-self: flex-start; border-bottom-left-radius: 2px; }
+        
+        .back-btn { display: none; margin-bottom: 15px; background: #34495e; }
+        
+        /* GRID CSS */
+        .card { background: var(--panel); padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #34495e; }
+        th { color: var(--accent); }
+        
+        .badge { background: var(--danger); padding: 2px 6px; border-radius: 50%; font-size: 11px; }
+        
+        /* Overlay scuro per Mobile Sidebar */
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999; }
+        .sidebar-overlay.open { display: block; }
+
+        /* RESPONSIVE DESIGN FOR SMARTPHONES */
+        @media (max-width: 768px) {
+            .sidebar { position: absolute; left: 0; transform: translateX(-100%); height: 100%; z-index: 1000; }
+            .sidebar.open { transform: translateX(0); }
+            .hamburger { display: block; }
+            .topbar { flex-wrap: wrap; gap: 10px; }
+            
+            /* Responsive Chat Logic */
+            .chat-list { width: 100%; }
+            .chat-area { display: none; width: 100%; }
+            .chat-active .chat-list { display: none; }
+            .chat-active .chat-area { display: flex; }
+            .back-btn { display: inline-block; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>METIS PRO LOGIN</h2>
+            <p style="font-size:13px; color:#bdc3c7; margin-bottom:20px;">Accedi con i dati registrati nel Widget</p>
+            <input type="email" id="log-email" placeholder="La tua Email completa" autocomplete="email">
+            <input type="password" id="log-code" placeholder="Password (4 cifre)" autocomplete="current-password" onkeypress="if(event.key === 'Enter') doWebLogin()">
+            <button onclick="doWebLogin()" id="btn-login">ACCEDI ALLA DASHBOARD</button>
+            <div id="log-err" style="color: var(--danger); margin-top: 15px; font-size: 14px; font-weight:bold;"></div>
+        </div>
+    </div>
+
+    <div id="dashboard-screen">
+        <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+        <div class="sidebar" id="sidebar">
+            <div class="brand">METIS PRO DASH</div>
+            <div class="nav-item active" onclick="switchTab('chat'); toggleSidebar();">💬 Chat Live <span id="badge-chat" class="badge" style="display:none">0</span></div>
+            <div class="nav-item" onclick="switchTab('email'); toggleSidebar();">📧 Invia Email <span class="badge" style="background:#3498db;">Nuovo</span></div>
+            <div class="nav-item" onclick="switchTab('corsi'); toggleSidebar();">⚙️ Gestione Corsi</div>
+            <div class="nav-item" onclick="switchTab('drive'); toggleSidebar();">📁 Risorse Drive</div>
+            <div class="nav-item" onclick="switchTab('ticket'); toggleSidebar();">🎫 Ticket Email <span id="badge-ticket" class="badge" style="display:none">0</span></div>
+            <div class="nav-item" onclick="switchTab('studenti'); toggleSidebar();">🎓 Log Studenti</div>
+        </div>
+
+        <div class="main-content">
+            <div class="topbar">
+                <div style="display:flex; align-items:center;">
+                    <div class="hamburger" onclick="toggleSidebar()">☰</div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label style="display:none;" class="mobile-hide">Corso:</label>
+                        <select id="global-course-select" onchange="onCourseChange()" style="width: auto;"><option value="">Caricamento...</option></select>
+                    </div>
+                </div>
+                <div id="sync-status" style="font-size:12px; color:#bdc3c7;">Connessione...</div>
+            </div>
+
+            <div id="tab-chat" class="tab-content active">
+                <div class="chat-container" id="chat-wrapper">
+                    <div class="chat-list" id="chat-list"><div style="text-align:center; color:#7f8c8d; margin-top:20px;">Seleziona un corso...</div></div>
+                    <div class="chat-area">
+                        <button class="back-btn" onclick="backToChatList()">🔙 Torna alla Lista</button>
+                        <h3 id="current-chat-title" style="margin-top:0; border-bottom:1px solid #34495e; padding-bottom:10px;">Seleziona una chat</h3>
+                        <div class="msg-box" id="chat-history"></div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="chat-input" placeholder="Scrivi un messaggio..." disabled onkeypress="if(event.key === 'Enter') sendMsg()">
+                            <button id="send-btn" onclick="sendMsg()" disabled>INVIA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-email" class="tab-content">
+                <div class="card">
+                    <h3 style="margin-top:0; color:var(--accent);">Invia Email (con o senza allegato)</h3>
+                    <p style="font-size: 13px; color: #bdc3c7;">Usa questo form per inviare un'email direttamente allo studente senza dover aprire il tuo client locale. Il file verrà caricato sul Cloud in totale sicurezza.</p>
+                    <div style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
+                        <input type="email" id="em-to" placeholder="A: (Email dello Studente)">
+                        <input type="text" id="em-subj" placeholder="Oggetto dell'Email">
+                        <textarea id="em-body" rows="6" placeholder="Testo del messaggio..."></textarea>
+                        
+                        <div style="border: 1px dashed #455d7a; padding: 15px; border-radius: 5px; background: #1e2b3c;">
+                            <label style="display:block; margin-bottom:10px; font-weight:bold;">Allega un file (opzionale - max 5MB):</label>
+                            <input type="file" id="em-file">
+                        </div>
+                        
+                        <button onclick="sendDashboardEmail()" id="btn-send-email" style="padding: 15px; font-size: 16px;">INVIA EMAIL ORA</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-corsi" class="tab-content">
+                <div class="card">
+                    <h3 style="margin-top:0; color:var(--warning);">Stato Widget SCORM</h3>
+                    <p>Abilita o disabilita il widget interattivo per questo corso.</p>
+                    <button onclick="setCourseStatus('Active')" style="background:#27ae60;">Attiva Widget</button>
+                    <button onclick="setCourseStatus('Inactive')" class="danger">Disattiva Widget</button>
+                </div>
+                <div class="card">
+                    <h3 style="margin-top:0; color:var(--warning);">Annuncio Docente in Tempo Reale</h3>
+                    <textarea id="notice-input" style="height:80px; margin-bottom:10px;"></textarea>
+                    <button onclick="updateNotice()" style="background:#f39c12;">Aggiorna Annuncio</button>
+                </div>
+            </div>
+
+            <div id="tab-drive" class="tab-content">
+                <div class="card" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <input type="file" id="drive-upload" style="flex:1; min-width:200px;">
+                    <button onclick="uploadToDrive()" style="background:#27ae60;">Carica nel Corso</button>
+                </div>
+                <div class="card" style="flex:1; overflow-y:auto; overflow-x:auto;">
+                    <table id="drive-table">
+                        <thead><tr><th>Nome File</th><th>KB</th><th>Azioni</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-ticket" class="tab-content">
+                <div class="card" style="flex:1; overflow-y:auto;" id="ticket-container">
+                    <p>Caricamento ticket...</p>
+                </div>
+            </div>
+
+            <div id="tab-studenti" class="tab-content">
+                <div class="card" style="display:flex; flex-direction:column; gap:5px;">
+                    <input type="text" id="student-search" placeholder="Cerca studente (Maiuscole e Minuscole sono IMPORTANTI!)..." onkeyup="renderStudents()">
+                    <small style="color:#f1c40f;">Attenzione: la ricerca distingue le lettere maiuscole dalle minuscole (Case Sensitive).</small>
+                </div>
+                <div class="card" style="flex:1; overflow-y:auto; overflow-x:auto;">
+                    <table id="student-table">
+                        <thead><tr><th>UID</th><th>Nome</th><th>Matricola</th><th>Accesso</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MASTER_URL = "https://script.google.com/macros/s/AKfycbwluiG6dYzB5DRR_KIEl78jjsQwcWXzkGjAd7zFuHXYCdnMqE8UaPCu0i1s2rUFQzYV/exec";
+        
+        let USER_EMAIL = "";
+        let LICENSE = "WEB_DASHBOARD"; 
+        
+        let allCourses = [];
+        let allStudents = [];
+        let activeTab = 'chat';
+        let currentUid = null;
+        let lastChatsSig = "";
+        let currentTicketsLength = 0;
+
+        async function doWebLogin() {
+            const em = document.getElementById("log-email").value.trim();
+            const cd = document.getElementById("log-code").value.trim();
+            const btn = document.getElementById("btn-login");
+            const err = document.getElementById("log-err");
+            
+            if(!em || !cd) { err.innerText = "Inserisci la tua Email e il codice a 4 cifre."; return; }
+            
+            btn.disabled = true;
+            btn.innerText = "Verifica in corso...";
+            err.innerText = "";
+            
+            try {
+                const url = MASTER_URL + "?action=login&email=" + encodeURIComponent(em) + "&code=" + encodeURIComponent(cd) + "&machine_info=Web_Dashboard";
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if(data.success) {
+                    USER_EMAIL = data.user;
+                    document.getElementById("login-screen").style.display = "none";
+                    document.getElementById("dashboard-screen").style.display = "flex";
+                    init(); 
+                } else {
+                    err.innerText = data.error || "Credenziali errate.";
+                }
+            } catch(e) {
+                err.innerText = "Impossibile contattare il server. Verifica la connessione o l'URL del Master.";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "ACCEDI ALLA DASHBOARD";
+            }
+        }
+
+        function toggleSidebar() {
+            if(window.innerWidth <= 768) {
+                document.getElementById("sidebar").classList.toggle("open");
+                document.getElementById("sidebar-overlay").classList.toggle("open");
+            }
+        }
+
+        async function init() {
+            document.getElementById("sync-status").innerText = "Scaricamento corsi...";
+            try {
+                const res = await fetch(MASTER_URL + "?action=getCourses&user=" + encodeURIComponent(USER_EMAIL) + "&license=" + encodeURIComponent(LICENSE));
+                allCourses = await res.json();
+                const sel = document.getElementById("global-course-select");
+                sel.innerHTML = "";
+                if(allCourses.length === 0) sel.innerHTML = "<option value=''>Nessun Corso</option>";
+                
+                allCourses.forEach(c => {
+                    let opt = document.createElement("option");
+                    opt.value = c.id; opt.innerText = c.id;
+                    sel.appendChild(opt);
+                });
+                
+                onCourseChange();
+                setInterval(globalPoll, 3000);
+                globalPoll();
+            } catch(e) {
+                document.getElementById("sync-status").innerText = "Errore di Rete";
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            activeTab = tabId;
+            if(tabId === 'drive') loadDrive();
+            if(tabId === 'ticket') loadTickets();
+            if(tabId === 'studenti') loadStudents();
+        }
+
+        function onCourseChange() {
+            const cid = document.getElementById("global-course-select").value;
+            const cInfo = allCourses.find(c => c.id === cid);
+            if(cInfo) document.getElementById("notice-input").value = cInfo.notice || "";
+            backToChatList(); 
+            lastChatsSig = "";
+            document.getElementById("chat-history").innerHTML = "";
+            document.getElementById("chat-input").disabled = true;
+            document.getElementById("send-btn").disabled = true;
+            document.getElementById("current-chat-title").innerText = "Seleziona una chat";
+            
+            if(activeTab === 'drive') loadDrive();
+            if(activeTab === 'studenti') loadStudents();
+            globalPoll();
+        }
+
+        function backToChatList() {
+            currentUid = null;
+            document.getElementById("chat-wrapper").classList.remove("chat-active");
+            globalPoll();
+        }
+
+        async function globalPoll() {
+            const cid = document.getElementById("global-course-select").value;
+            if(!cid) return;
+            
+            try {
+                const chatUrl = MASTER_URL + "?action=pollChatAdmin" + (currentUid ? "&uid=" + currentUid : "") + "&user=" + encodeURIComponent(USER_EMAIL) + "&license=" + encodeURIComponent(LICENSE) + "&_t=" + Date.now();
+                const resChat = await fetch(chatUrl);
+                const dataChat = await resChat.json();
+                
+                const filteredChats = dataChat.chats.filter(c => c.course === cid);
+                const sig = JSON.stringify(filteredChats.map(c => c.uid + c.lastTime + c.unread));
+                
+                let totalUnread = 0;
+                dataChat.chats.forEach(c => totalUnread += c.unread);
+                const bChat = document.getElementById("badge-chat");
+                bChat.style.display = totalUnread > 0 ? "inline-block" : "none";
+                bChat.innerText = totalUnread;
+
+                if(sig !== lastChatsSig && activeTab === 'chat') {
+                    lastChatsSig = sig;
+                    const list = document.getElementById("chat-list");
+                    list.innerHTML = "";
+                    if(filteredChats.length === 0) list.innerHTML = "<div style='text-align:center; color:#7f8c8d; margin-top:20px;'>Nessuna chat per questo corso.</div>";
+                    filteredChats.forEach(c => {
+                        const btn = document.createElement("button");
+                        btn.className = "chat-btn" + (currentUid === c.uid ? " active" : "");
+                        let badge = c.unread > 0 ? `<span class="badge" style="float:right;">${c.unread}</span>` : "";
+                        btn.innerHTML = `${c.nome} ${badge}`;
+                        btn.onclick = () => selectChat(c.uid, c.nome);
+                        list.appendChild(btn);
+                    });
+                }
+
+                if(currentUid && dataChat.messages && activeTab === 'chat') {
+                    const hist = document.getElementById("chat-history");
+                    let scrolledToBottom = hist.scrollHeight - hist.clientHeight <= hist.scrollTop + 50;
+                    document.getElementById("current-chat-title").innerText = `Chat con Studente ` + (dataChat.studentOnline ? '🟢' : '🔴');
+                    hist.innerHTML = "";
+                    dataChat.messages.forEach(m => {
+                        const d = document.createElement("div");
+                        d.className = "msg " + (m.SenderType === "Admin" ? "msg-admin" : "msg-student");
+                        let readStr = (m.SenderType === "Admin" && m.ReadTime) ? ` ✓` : "";
+                        d.innerHTML = `<div>${m.Message}</div><div style="font-size:10px; opacity:0.7; text-align:right;">${m.TimeStr}${readStr}</div>`;
+                        hist.appendChild(d);
+                    });
+                    if(scrolledToBottom) hist.scrollTop = hist.scrollHeight;
+                    
+                    if(dataChat.messages.some(m => m.SenderType === "Student" && !m.ReadTime)) {
+                        const fd = new URLSearchParams();
+                        fd.append("action", "markAsRead"); fd.append("course_id", cid); fd.append("uid", currentUid); fd.append("reader_type", "Admin");
+                        fetch(MASTER_URL, {method: "POST", body: fd, mode: "no-cors"});
+                    }
+                }
+
+                const resT = await fetch(MASTER_URL + "?action=getTickets&user=" + encodeURIComponent(USER_EMAIL) + "&license=" + encodeURIComponent(LICENSE) + "&_t=" + Date.now());
+                const tData = await resT.json();
+                if(tData.length !== currentTicketsLength) {
+                    currentTicketsLength = tData.length;
+                    const bT = document.getElementById("badge-ticket");
+                    bT.style.display = "inline-block"; bT.innerText = "!";
+                    if(activeTab === 'ticket') loadTickets();
+                }
+
+                document.getElementById("sync-status").innerText = "Sincronizzato: " + new Date().toLocaleTimeString();
+            } catch(e) {
+                document.getElementById("sync-status").innerText = "Errore Rete";
+            }
+        }
+
+        function selectChat(uid, nome) {
+            currentUid = uid;
+            document.getElementById("chat-wrapper").classList.add("chat-active");
+            document.getElementById("chat-input").disabled = false;
+            document.getElementById("send-btn").disabled = false;
+            document.getElementById("chat-history").innerHTML = "Caricamento...";
+            lastChatsSig = ""; 
+            globalPoll();
+        }
+
+        async function sendMsg() {
+            const input = document.getElementById("chat-input");
+            const val = input.value.trim();
+            const cid = document.getElementById("global-course-select").value;
+            if(!val || !currentUid || !cid) return;
+            input.value = "";
+            const fd = new URLSearchParams();
+            fd.append("action", "sendChatMessage"); fd.append("course_id", cid); fd.append("uid", currentUid);
+            fd.append("nome", "Docente"); fd.append("message", val); fd.append("sender_type", "Admin"); fd.append("msg_id", Date.now());
+            fetch(MASTER_URL, {method: "POST", body: fd, mode: "no-cors"}).then(() => globalPoll());
+        }
+        
+        async function sendDashboardEmail() {
+            const to = document.getElementById('em-to').value.trim();
+            const subj = document.getElementById('em-subj').value.trim();
+            const body = document.getElementById('em-body').value.trim();
+            const fileInput = document.getElementById('em-file');
+            const btn = document.getElementById('btn-send-email');
+            
+            if(!to || !body || !subj) {
+                alert("Completa tutti i campi di testo per l'invio.");
+                return;
+            }
+
+            btn.innerText = "CARICAMENTO E INVIO IN CORSO...";
+            btn.disabled = true;
+
+            const fd = new URLSearchParams();
+            fd.append("action", "sendAdminEmail");
+            fd.append("destinatario", to);
+            fd.append("oggetto", subj);
+            fd.append("messaggio", body);
+
+            if(fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const b64 = e.target.result.split(',')[1];
+                    fd.append("fileName", file.name);
+                    fd.append("fileData", b64);
+                    await executeEmailPost(fd, btn);
+                };
+                reader.onerror = () => { alert("Errore lettura file."); btn.innerText = "INVIA EMAIL ORA"; btn.disabled = false; };
+                reader.readAsDataURL(file);
+            } else {
+                await executeEmailPost(fd, btn);
+            }
+        }
+        
+        async function executeEmailPost(fd, btn) {
+            try {
+                const res = await fetch(MASTER_URL, {method: "POST", body: fd});
+                const data = await res.json();
+                if(data.success) {
+                    alert("Email ed eventuali allegati inviati correttamente al destinatario!");
+                    document.getElementById('em-to').value = "";
+                    document.getElementById('em-subj').value = "";
+                    document.getElementById('em-body').value = "";
+                    document.getElementById('em-file').value = "";
+                } else {
+                    alert("Errore Server: " + data.error);
+                }
+            } catch(err) {
+                alert("Errore connessione: " + err.message);
+            } finally {
+                btn.innerText = "INVIA EMAIL ORA";
+                btn.disabled = false;
+            }
+        }
+
+        async function updateNotice() {
+            const cid = document.getElementById("global-course-select").value;
+            const txt = document.getElementById("notice-input").value;
+            const fd = new URLSearchParams();
+            fd.append("action", "updateNotice"); fd.append("course_id", cid); fd.append("notice_text", txt);
+            await fetch(MASTER_URL, {method: "POST", body: fd});
+            alert("Annuncio aggiornato nel cloud!");
+        }
+
+        async function setCourseStatus(status) {
+            const cid = document.getElementById("global-course-select").value;
+            const fd = new URLSearchParams();
+            fd.append("action", "setCourseStatus"); fd.append("course_id", cid); fd.append("status", status);
+            await fetch(MASTER_URL, {method: "POST", body: fd});
+            alert("Stato widget impostato su: " + status);
+        }
+
+        async function loadDrive() {
+            const cid = document.getElementById("global-course-select").value;
+            const tb = document.querySelector("#drive-table tbody");
+            tb.innerHTML = "<tr><td colspan='3'>Caricamento in corso...</td></tr>";
+            const res = await fetch(MASTER_URL + "?action=listResources&course_id=" + encodeURIComponent(cid));
+            const data = await res.json();
+            tb.innerHTML = "";
+            if(data.length===0) tb.innerHTML = "<tr><td colspan='3'>Nessun file.</td></tr>";
+            data.forEach(f => {
+                tb.innerHTML += `<tr><td><a href="${f.url}" target="_blank" style="color:var(--accent); text-decoration:none;">${f.name}</a></td><td>${f.size}</td><td><button class="danger" onclick="deleteFile('${f.id}')">X</button></td></tr>`;
+            });
+        }
+
+        async function deleteFile(id) {
+            if(!confirm("Eliminare il file dal Cloud?")) return;
+            const fd = new URLSearchParams();
+            fd.append("action", "deleteFile"); fd.append("fileId", id);
+            await fetch(MASTER_URL, {method: "POST", body: fd});
+            loadDrive();
+        }
+
+        async function uploadToDrive() {
+            const cid = document.getElementById("global-course-select").value;
+            const file = document.getElementById("drive-upload").files[0];
+            if(!file) return alert("Seleziona un file");
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const b64 = e.target.result.split(',')[1];
+                const fd = new URLSearchParams();
+                fd.append("action", "uploadFile"); fd.append("course_id", cid); fd.append("fileName", file.name); fd.append("fileData", b64);
+                alert("Caricamento in corso... premi OK e attendi.");
+                await fetch(MASTER_URL, {method: "POST", body: fd});
+                document.getElementById("drive-upload").value = "";
+                loadDrive();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function loadTickets() {
+            document.getElementById("badge-ticket").style.display = "none";
+            const tc = document.getElementById("ticket-container");
+            tc.innerHTML = "Caricamento ticket...";
+            const res = await fetch(MASTER_URL + "?action=getTickets&user=" + encodeURIComponent(USER_EMAIL) + "&license=" + encodeURIComponent(LICENSE) + "&_t=" + Date.now());
+            const data = await res.json();
+            tc.innerHTML = "";
+            if(data.length === 0) tc.innerHTML = "Nessun ticket presente.";
+            data.forEach(t => {
+                let linksHtml = "";
+                if(t.links) t.links.split(" | ").forEach((l, i) => linksHtml += `<a href="${l}" target="_blank" style="color:var(--accent); margin-right:10px;">📎 All.${i+1}</a>`);
+                tc.innerHTML += `<div class="card" style="margin-bottom:10px; background:#1e2b3c;">
+                    <h4 style="margin:0; color:var(--warning);">${t.course} - ${t.id} <span style="float:right; font-size:11px; color:#999;">${t.time}</span></h4>
+                    <p style="margin:5px 0; font-size:13px;"><b>Da:</b> ${t.user} (${t.email})</p>
+                    <div style="background:#2c3e50; padding:10px; border-radius:5px; font-size:14px; overflow-wrap: break-word;">${t.msg}</div>
+                    <div style="margin-top:10px;">${linksHtml}</div>
+                    <button style="margin-top:10px;" onclick="document.getElementById('em-to').value='${t.email}'; document.getElementById('em-subj').value='Re: ${t.id}'; switchTab('email'); toggleSidebar();">Rispondi Dalla Dash</button>
+                </div>`;
+            });
+        }
+
+        async function loadStudents() {
+            const cid = document.getElementById("global-course-select").value;
+            const res = await fetch(MASTER_URL + "?action=getStudents&course_id=" + encodeURIComponent(cid));
+            allStudents = await res.json();
+            renderStudents();
+        }
+
+        function renderStudents() {
+            const term = document.getElementById("student-search").value; 
+            const tb = document.querySelector("#student-table tbody");
+            tb.innerHTML = "";
+            
+            const filtered = allStudents.filter(s => s.nome.includes(term) || s.uid.includes(term) || s.matr.includes(term));
+            
+            if(filtered.length === 0) tb.innerHTML = "<tr><td colspan='4'>Nessun risultato (Verifica le Maiuscole/Minuscole).</td></tr>";
+            
+            filtered.forEach(s => {
+                const d = new Date(s.lastSeen);
+                tb.innerHTML += `<tr><td>${s.uid}</td><td>${s.nome}</td><td>${s.matr}</td><td>${d.toLocaleDateString()} ${d.toLocaleTimeString()}</td></tr>`;
+            });
+        }
+    </script>
+<script>
+        // Registrazione del Service Worker per la PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registrato con successo:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Registrazione Service Worker fallita:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
